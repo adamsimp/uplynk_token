@@ -1,0 +1,24 @@
+{
+  "name": "uplynk-token-gen2",
+  "version": "1.0.0",
+  "description": "GET API for uplynk token je",
+  "main": "uplynk_token2.js",
+  "scripts": {
+    "start": "node uplynk_token2.js"
+  },
+  "dependencies": {
+    "body-parser": "^1.8.4",
+    "ejs": "^2.4.1",
+    "express": "~4.9.x"
+  },
+  "engines": {
+    "node": "0.10.x"
+  },
+  "repository": {},
+  "keywords": [
+    "node",
+    "heroku",
+    "express"
+  ],
+  "license": "MIT"
+}

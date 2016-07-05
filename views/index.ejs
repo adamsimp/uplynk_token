@@ -1,0 +1,221 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <!-- Standard Meta -->
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+    <title>Token Generator</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.1.8/semantic.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.1.8/components/menu.min.css" rel="stylesheet">
+    <script type="text/javascript" src="https://code.jquery.com/jquery-2.1.4.min.js"></script>
+    <script type="text/javascript" src="https://cdnjs.cloudflare.com/ajax/libs/semantic-ui/2.1.8/semantic.min.js"></script>
+    <style>
+        body {
+            background-color: black;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="ui main text container" style="margin-top: 60px;">
+        <form class="ui inverted form" id="tokenForm">
+            <h1 class="ui inverted center aligned header">Uplynk Token Generator</h1>
+            <h5 class="ui inverted center aligned header">Enter Account and Media Info</h5>
+            <div class="fields multi-asset" style="padding-bottom: 10px">
+                <div class="fourteen wide field" style="padding-right: 0px">
+                  <label>Content ID</label>
+                  <input id="content-id" class="content-id required" type="text" placeholder="GUID or External ID">
+                </div>
+                <div class="two wide field" style="padding-top: 22px" >
+                    <a class="ui inverted blue button op-btn" id="addMultiAsset" style="margin-left: 3px">Add</a>
+                </div>
+            </div>
+            <div id="attachMultiAsset">
+            </div>
+            <div class="fourteen wide field">
+                <label>ID Type</label>
+                <select id="id-type" class="ui dropdown">
+                    <option value="cid">GUID</option>
+                    <option value="eid">External ID</option>
+                </select>
+            </div>
+            <div class="fourteen wide field">
+                <label>Content Type</label>
+                <select id="ct" class="ui dropdown">
+                    <option value="a">Asset</option>
+                    <option value="c">Channel</option>
+                </select>
+            </div>
+            <div class="fourteen wide field" style="display:none">
+                <label>Account ID</label>
+                <input type="text" id="oid" placeholder="User ID from uplynk CMS">
+            </div>
+            <div class="fourteen wide field">
+                <label>Token Duration</label>
+                <input type="number" id="exp" class="required" min="1" placeholder="In Minutes">
+            </div>
+            <div class="fourteen wide field">
+                <label>API Key</label>
+                <input id="key" class="required" placeholder="API Key from uplynk CMS" type="text">
+            </div>
+            <div class="fourteen wide field">
+                <label>Custom Fields</label>
+            </div>
+            <div class="fields custom-field" style="padding-bottom: 10px">
+                <div class="seven wide field" style="padding-right: 5px">
+                    <input class="input-param" placeholder="Parameter" type="text">
+                </div>
+                <div class="seven wide field" style="padding-right: 0px">
+                    <input class="input-val" placeholder="Value" type="text">
+                </div>
+                <div class="two wide field">
+                    <a class="ui inverted blue button op-btn" id="cloneField" style="margin-left: 3px">Add</a>
+                </div>
+            </div>
+            <div id="appendField">
+            </div>
+            <div class="inline field">
+                <div class="ui checkbox">
+                    <input type="checkbox" name="v" value="2">
+                    <label>Generate Preplay URL</label>
+                </div>
+            </div>
+            <button class="fluid ui inverted blue submit button" style="margin-top: 20px;" type="submit">Generate Token</button>
+            <div style="margin-top: 25px;">
+                <div id="error" class="ui error message" style="display: none"></div>
+                <div class="field" style="display: none">
+                    <label>Tokenized URL</label>
+                    <textarea id="urlBox" rows=4></textarea>
+                </div>
+            </div>
+        </form>
+<script>
+    $('select')
+      .dropdown();
+    ;
+
+    $(function() {
+        // Clone div for multi asset
+        $('#addMultiAsset').click(function(){
+            var anotherAsset = $(this).closest('.multi-asset').clone();
+            $(anotherAsset).find(".op-btn").replaceWith(
+                '<a class="ui inverted red button deleteAsset">Del</a>');
+            $(anotherAsset).find('input').val("");
+            $(anotherAsset).find('.content-id').attr("id", "");
+            $(anotherAsset).appendTo('#attachMultiAsset');
+        });
+        // Clone div for custom field
+        $('#cloneField').click(function() {
+            var node = $(this).closest('.custom-field').clone();
+            $(node).find(".op-btn").replaceWith(
+                '<a class="ui inverted red button deleteField">Del</a>');
+            $(node).find('input').val("");
+            node.appendTo($('#appendField'));
+        });
+
+        // Handle custom-field deletion
+        $(document).on('click', '.deleteField', function() {
+            $(this).closest('.custom-field').remove();
+        });
+
+        // Handle multi-asset deletion
+        $(document).on('click', '.deleteAsset', function() {
+            $(this).closest('.multi-asset').remove();
+        });
+
+        // Display Accound ID if ID Type is External
+        $('#id-type').change(function(){
+          if ($(this).val() == "eid"){
+            $('#oid').closest(".field").show();
+          }
+          else{
+            $('#oid').val("");
+            $('#oid').closest(".field").hide();
+          }
+        })
+
+        // Remove error class from required div
+        $('input').click(function(){
+          $(this).closest(".field").removeClass("error");
+        })
+
+        // Validate
+        var validate = function(){
+          var bool = true;
+          $('.required').each(function(){
+            if ($(this).val().trim() == ""){
+              $(this).closest(".field").addClass("error");
+              bool = false;
+            }
+          });
+
+          // Check Accound ID if ID Type is External
+          if ($('#id-type').val() == "eid") {
+            if ($('#oid').val().trim() == ""){
+              $('#oid').closest(".field").addClass("error")
+              bool = false ;
+            }
+          }
+          return bool;
+        };
+
+        // Process form data and generate token
+        $('#tokenForm').submit(function(event) {
+            event.preventDefault();
+            $('#urlBox').html("");
+
+            if (validate()){
+
+              var formData = {};
+              var assetList = [];
+              var id_type = $('#id-type').val();
+              var exp = $('#exp').val();
+              var key = $('#key').val();
+              var ct = $('#ct').val();
+              var oid = $('#oid').val();
+              formData[id_type] = assetList;
+              formData['exp'] = exp;
+              formData['key'] = key;
+              formData['ct'] = ct;
+
+              // Create list of External IDs or GUIDs
+              $(".multi-asset").each(function(){
+                  var contentID = $(this).find('.content-id').val();
+                  if (contentID != ""){
+                    assetList.push(contentID);
+                  }
+              });
+
+              // Generate key value from custom fields
+              $(".custom-field").each(function(){
+                  var inputParam = $(this).find('.input-param').val();
+                  var inputVal = $(this).find('.input-val').val();
+                  if (inputParam != "" && inputVal != ""){
+                    formData[inputParam] = inputVal;
+                  }
+              });
+
+              // console.log(JSON.stringify(formData));
+              $.ajax({
+                  url: '/token',
+                  type: 'POST',
+                  data: JSON.stringify(formData),
+                  contentType: "application/json",
+                  success: function(data) {
+                      $('#urlBox').parent().show();
+                      $('#error').hide();
+                      $('#urlBox').html(JSON.stringify(data.url).replace(/"/g,''));
+                  },
+                  error: function() {
+                      $('#error').html('Error: Could not generate token.');
+                      $('#error').show();
+                      $('#urlBox').parent().hide();
+                  }
+              });
+            };
+        });
+    });
+</script>
+</body>
+</html>
